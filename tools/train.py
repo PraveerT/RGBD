@@ -75,8 +75,9 @@ logging.getLogger().addHandler(fh)
 
 def reduce_mean(tensor, nprocs):
     rt = tensor.clone()
-    dist.all_reduce(rt, op=dist.ReduceOp.SUM)
-    rt /= nprocs
+    if nprocs > 1:
+        dist.all_reduce(rt, op=dist.ReduceOp.SUM)
+        rt /= nprocs
     return rt.item()
 
 def main(local_rank, nprocs, args):
@@ -95,7 +96,8 @@ def main(local_rank, nprocs, args):
     # Init distribution
     #---------------------------
     torch.cuda.set_device(local_rank)
-    torch.distributed.init_process_group(backend='nccl')
+    if nprocs > 1:
+        torch.distributed.init_process_group(backend='nccl')
 
     #----------------------------
     # build function
@@ -134,7 +136,8 @@ def main(local_rank, nprocs, args):
 
     if args.SYNC_BN and args.nprocs > 1:
         model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    model = nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], find_unused_parameters=False)
+    if nprocs > 1:
+        model = nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], find_unused_parameters=False)
     if local_rank == 0:
         logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
         # logging.info('FLOPs: {}'.format(flops_benchmark.count_flops(model)))
@@ -343,13 +346,17 @@ def train(train_queue, model, criterion, optimizer, epoch, local_rank):
 
         optimizer.zero_grad()
         Total_loss.backward()
-        nn.utils.clip_grad_norm_(model.module.parameters(), args.grad_clip)
+        if args.nprocs > 1:
+            nn.utils.clip_grad_norm_(model.module.parameters(), args.grad_clip)
+        else:
+            nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         optimizer.step()
 
         #---------------------
         # Meter performance
         #---------------------
-        torch.distributed.barrier()
+        if args.nprocs > 1:
+            torch.distributed.barrier()
         globals()['Acc'] = calculate_accuracy(logits, target)
         globals()['Acc_1'] = calculate_accuracy(xs, target)
         globals()['Acc_2'] = calculate_accuracy(xm, target)
@@ -380,16 +387,19 @@ def train(train_queue, model, criterion, optimizer, epoch, local_rank):
     return meter_dict['Acc'].avg, meter_dict['Total_loss'].avg, meter_dict
 
 @torch.no_grad()
-def concat_all_gather(tensor):
+def concat_all_gather(tensor, nprocs):
     """
     Performs all_gather operation on the provided tensors.
     *** Warning ***: torch.distributed.all_gather has no gradient.
     """
-    tensors_gather = [torch.ones_like(tensor)
-        for _ in range(torch.distributed.get_world_size())]
-    torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
-    output = torch.cat(tensors_gather, dim=0)
-    return output
+    if nprocs > 1:
+        tensors_gather = [torch.ones_like(tensor)
+            for _ in range(torch.distributed.get_world_size())]
+        torch.distributed.all_gather(tensors_gather, tensor, async_op=False)
+        output = torch.cat(tensors_gather, dim=0)
+        return output
+    else:
+        return tensor
 
 @torch.no_grad()
 def infer(valid_queue, model, criterion, local_rank, epoch):
@@ -435,7 +445,8 @@ def infer(valid_queue, model, criterion, local_rank, epoch):
         grounds += target.cpu().tolist()
         preds += torch.argmax(logits, dim=1).cpu().tolist()
         v_paths += v_path
-        torch.distributed.barrier()
+        if args.nprocs > 1:
+            torch.distributed.barrier()
         globals()['Acc'] = calculate_accuracy(logits, target)
         globals()['Acc_1'] = calculate_accuracy(xs+xm, target)
         globals()['Acc_2'] = calculate_accuracy(xs+xl, target)
@@ -463,9 +474,10 @@ def infer(valid_queue, model, criterion, local_rank, epoch):
         if args.save_output:
             for t, logit in zip(v_path, logits):
                 output[t] = logit
-    torch.distributed.barrier()
-    grounds_gather = concat_all_gather(torch.tensor(grounds).cuda(local_rank))
-    preds_gather = concat_all_gather(torch.tensor(preds).cuda(local_rank))
+    if args.nprocs > 1:
+        torch.distributed.barrier()
+    grounds_gather = concat_all_gather(torch.tensor(grounds).cuda(local_rank), args.nprocs)
+    preds_gather = concat_all_gather(torch.tensor(preds).cuda(local_rank), args.nprocs)
     grounds_gather, preds_gather = list(map(lambda x: x.cpu().numpy(), [grounds_gather, preds_gather]))
 
     if local_rank == 0:

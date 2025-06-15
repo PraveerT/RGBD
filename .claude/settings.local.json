@@ -12,7 +12,8 @@
       "Bash(pip install:*)",
       "Bash(pip uninstall:*)",
       "Bash(rm:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }
