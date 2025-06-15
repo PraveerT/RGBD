@@ -90,9 +90,12 @@ def load_checkpoint(model, model_path, optimizer=None):
     checkpoint = torch.load(model_path, map_location='cpu')
     model.load_state_dict(checkpoint['model'], strict=False)
     if optimizer:
-        optimizer.load_state_dict(checkpoint['optimizer'])
-    epoch = checkpoint['epoch']
-    bestacc = checkpoint['bestacc']
+        try:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+        except:
+            print("Optimizer state dict loading failed - using current optimizer state")
+    epoch = checkpoint.get('epoch', 0)
+    bestacc = checkpoint.get('bestacc', 0.0)
     return model, optimizer, epoch, bestacc
 
 def load_pretrained_checkpoint(model, model_path):
