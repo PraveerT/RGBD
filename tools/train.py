@@ -109,8 +109,11 @@ def main(local_rank, nprocs, args):
     optimizer = build_optim(args, model)
     scheduler = build_scheduler(args, optimizer)
 
-    train_queue, train_sampler = build_dataset(args, phase='train')
-    valid_queue, valid_sampler = build_dataset(args, phase='valid')
+    if not args.eval_only:
+        train_queue, train_sampler = build_dataset(args, phase='train')
+    else:
+        train_queue, train_sampler = None, None
+    valid_queue, valid_sampler = build_dataset(args, phase='test')
 
 
     if args.resume:
@@ -157,7 +160,8 @@ def main(local_rank, nprocs, args):
         return
 
     for epoch in range(strat_epoch, args.epochs):
-        train_sampler.set_epoch(epoch)
+        if train_sampler is not None:
+            train_sampler.set_epoch(epoch)
         model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
 
         if epoch < args.scheduler['warm_up_epochs']-1:
