@@ -88,7 +88,7 @@ def save_checkpoint(state, is_best=False, save='./', filename='checkpoint.pth.ta
 def load_checkpoint(model, model_path, optimizer=None):
     # checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage.cuda(4))
     checkpoint = torch.load(model_path, map_location='cpu')
-    model.load_state_dict(checkpoint['model'])
+    model.load_state_dict(checkpoint['model'], strict=False)
     if optimizer:
         optimizer.load_state_dict(checkpoint['optimizer'])
     epoch = checkpoint['epoch']
