@@ -20,7 +20,7 @@ common:
   epochs: 100
   report_freq: 10
   optim: SGD
-  dist: True
+  dist: False
   vis_feature: True # Visualization?
   DEBUG: False
 
