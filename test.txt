@@ -1,0 +1,2 @@
+Processed_frames/rgb/test/class_01/subject13_r0 80 0
+Processed_frames/rgb/test/class_01/subject13_r1 80 0
