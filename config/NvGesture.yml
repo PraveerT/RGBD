@@ -1,6 +1,6 @@
 
 common:
-  data: /notebooks/RGBD/dataset/Nvidia/ 
+  data: /notebooks/RGBD/dataset/Nvidia/
   splits: /notebooks/RGBD/dataset/Nvidia/
 
   #-------basic Hyparameter----------
