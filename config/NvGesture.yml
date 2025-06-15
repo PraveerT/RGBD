@@ -1,7 +1,7 @@
 
 common:
-  data: /mnt/c/Users/Praveer/documents/MotionRGBD/dataset/Nvidia/ 
-  splits: /mnt/c/Users/Praveer/documents/MotionRGBD/dataset/Nvidia/
+  data: /notebooks/RGBD/dataset/Nvidia/ 
+  splits: /notebooks/RGBD/dataset/Nvidia/
 
   #-------basic Hyparameter----------
   visdom:
@@ -36,7 +36,7 @@ common:
   distill: 1.
 model:
   Network: I3DWTrans # e.g., I3DWTrans or FusionNet
-  pretrained: /mnt/c/Users/Praveer/documents/MotionRGBD/Checkpoints/model_best-Nv-M.pth.tar-v1
+  pretrained: /notebooks/RGBD/Checkpoints/model_best-Nv-M.pth.tar-v1
   resumelr: False
   sample_duration: 64
   sample_size: 224
@@ -52,8 +52,8 @@ model:
   SEHeads: 1
   N: 6 # Number of Transformer Blocks
   #-------Used for fusion network----------
-  rgb_checkpoint: '/mnt/c/Users/Praveer/documents/MotionRGBD/Checkpoints/model_best-Nv-M.pth.tar-v1'
-  depth_checkpoint: '/mnt/c/Users/Praveer/documents/MotionRGBD/Checkpoints/model_best-Nv-M.pth.tar-v1'
+  rgb_checkpoint: '/notebooks/RGBD/Checkpoints/model_best-Nv-M.pth.tar-v1'
+  depth_checkpoint: '/notebooks/RGBD/Checkpoints/model_best-Nv-M.pth.tar-v1'
 
 dataset:
   type: M
